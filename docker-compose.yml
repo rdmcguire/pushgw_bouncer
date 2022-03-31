@@ -1,0 +1,11 @@
+version: "3"
+services:
+  weewx_keepalive:
+    network_mode: bridge
+    image: image.libretechconsulting.com/dev/weewx_keepalive:latest
+    container_name: weewx_keepalive
+    volumes:
+      - /var/snap/lxd/common/lxd/unix.socket:/var/snap/lxd/common/lxd/unix.socket
+    command:
+      - --logLevel=warn
+    restart: unless-stopped
