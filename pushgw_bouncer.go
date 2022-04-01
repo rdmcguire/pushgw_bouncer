@@ -4,18 +4,20 @@ import (
 	"flag"
 	"time"
 
+	"rdmcguire/pushgw_bouncer/handlers"
+
 	"github.com/sirupsen/logrus"
 )
 
 // Defaults if left unspecified
 const (
-	defaultCheckInterval int    = 60
+	defaultCheckInterval string = "1m"
 	defaultLogLevel      string = "info"
 )
 
 // Command-line Flags override YAML config
 var (
-	checkInterval int
+	checkInterval string
 	pushgw        string
 	socketLXD     string
 	socketDocker  string
@@ -25,10 +27,10 @@ var (
 
 // Global objects
 var (
-	conf   *Config
+	conf   *config
 	log    *logrus.Logger
 	pushGW *pushgwAPI
-	lxdC   *lxdConn
+	lxd    *handlers.LXDConn
 )
 
 // All flags are optional
@@ -40,12 +42,12 @@ func init() {
 	flag.StringVar(&socketLXD, "socketLXD", socketLXD, "Location of LXD Unix socket")
 	flag.StringVar(&socketDocker, "socketDocker", socketDocker, "Location of Docker Unix socket")
 	flag.StringVar(&logLevel, "logLevel", logLevel, "Log level (error|warn|info|debug|trace)")
-	flag.IntVar(&checkInterval, "checkInterval", checkInterval, "Interval at which to perform liveliness check")
+	flag.StringVar(&checkInterval, "checkInterval", checkInterval, "Interval at which to perform liveliness check")
 	flag.Parse()
 
 	// Setup
 	log = logrus.New()
-	conf = new(Config)
+	conf = new(config)
 	conf.getConfig()
 
 	// Set logging level
@@ -59,10 +61,10 @@ func init() {
 
 	// Prepare pushGW API, LXD Client, and Docker Client
 	pushGW = &pushgwAPI{log: log}
-	lxdC = &lxdConn{socket: socketLXD}
+	lxd = &handlers.LXDConn{Socket: socketLXD}
 
 	// Connect to LXD socketLXD
-	if err := lxdC.connect(); err != nil {
+	if err := lxd.Connect(); err != nil {
 		log.WithFields(logrus.Fields{"socket": socketLXD, "error": err}).
 			Fatal("Unable to connect to LXD socket")
 	}
@@ -73,7 +75,8 @@ func init() {
 
 func main() {
 	// Tick away
-	ticker := time.NewTicker(time.Duration(checkInterval) * time.Second)
+	interval, _ := time.ParseDuration(conf.Settings.CheckInterval)
+	ticker := time.NewTicker(interval)
 	for range ticker.C {
 		// First refresh metrics from pushgateway
 		pushGW.getMetrics()

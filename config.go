@@ -8,15 +8,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Configuration File
+// configuration File
 type (
-	Config struct {
+	config struct {
 		Settings *settings  `yaml:"global"`
 		Monitors []*monitor `yaml:"monitors"`
 	}
 	settings struct {
 		PushGW        string `yaml:"push_gw"`
-		CheckInterval int    `yaml:"check_interval"`
+		CheckInterval string `yaml:"check_interval"`
 		LogLevel      string `yaml:"log_level"`
 		SocketLXD     string `yaml:"socket_lxd"`
 		SocketDocker  string `yaml:"socket_docker"`
@@ -26,7 +26,7 @@ type (
 // Read configuration from file
 // File can be specified via command-line flag
 // Default is config.yaml
-func (c *Config) getConfig() {
+func (c *config) getConfig() {
 	// Read the file
 	yamlConf, err := ioutil.ReadFile(configFile)
 	if err != nil {
@@ -35,7 +35,7 @@ func (c *Config) getConfig() {
 	// Parse the file
 	err = yaml.Unmarshal(yamlConf, c)
 	if err != nil {
-		log.Fatalf("Unable to load Config: %+v", err)
+		log.Fatalf("Unable to load config: %+v", err)
 	}
 	// Sanity checks
 	for _, m := range c.Monitors {
@@ -59,7 +59,7 @@ func (c *Config) getConfig() {
 }
 
 // Overwrites yaml settings if specified on command-line
-func (c *Config) mergeSettings() {
+func (c *config) mergeSettings() {
 	// Log Level
 	if logLevel != "" {
 		c.Settings.LogLevel = logLevel
@@ -78,15 +78,15 @@ func (c *Config) mergeSettings() {
 		c.Settings.PushGW = pushgw
 	}
 	// Interval at which to refresh metrics from pushgateway
-	if checkInterval != 0 {
+	if checkInterval != "" {
 		c.Settings.CheckInterval = checkInterval
-	} else if c.Settings.CheckInterval == 0 {
+	} else if c.Settings.CheckInterval == "" {
 		c.Settings.CheckInterval = defaultCheckInterval
 	}
 }
 
 // Check for log level in config, use provided default if not found
-func (c *Config) getLogLevel() logrus.Level {
+func (c *config) getLogLevel() logrus.Level {
 	var level logrus.Level
 	switch c.Settings.LogLevel {
 	case "error":

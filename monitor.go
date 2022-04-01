@@ -8,7 +8,7 @@ type monitor struct {
 	ContainerName    string   `yaml:"container_name"`
 	LabelName        string   `yaml:"label_name"`
 	LabelValue       string   `yaml:"label_value"`
-	MaxAge           string   `yaml:"maxAge"`
+	MaxAge           string   `yaml:"max_age"`
 	MaxAgeSecs       int      // Set by time.ParseDuration in config
 	RestartType      string   `yaml:"restart_type"`
 	RestartCommand   []string `yaml:"restart_command"`
