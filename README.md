@@ -31,7 +31,8 @@ monitors:
     container_name: prom-stack_api-exporter_1
     label_name: job
     label_value: api_exporter
-    restart_type: container```
+    restart_type: container
+```
 
 **LXD Container Command Example**
 ```yaml
@@ -46,7 +47,8 @@ monitors:
     restart_command:
       - /bin/systemd
       - restart
-      - weewx```
+      - weewx
+```
 
 **Global Settings**
 ```yaml
@@ -55,7 +57,8 @@ global:
   log_level: info
   socket_lxd: /var/snap/lxd/common/lxd/unix.socket
   socket_docker: /var/run/docker.sock
-  push_gw: http://pushgateway:9091```
+  push_gw: http://pushgateway:9091
+```
 
 ## Running
 
