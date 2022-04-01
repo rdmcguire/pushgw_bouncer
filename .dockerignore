@@ -1,0 +1,6 @@
+Dockerfile
+config*.yml
+.git
+.gitignore
+README.md
+pushgw_bouncer
