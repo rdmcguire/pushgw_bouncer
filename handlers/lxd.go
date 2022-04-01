@@ -5,6 +5,8 @@ import (
 	"github.com/lxc/lxd/shared/api"
 )
 
+// LXDConn implements the handlers.Handler interface
+// Provides functions to restart processes and containers
 type LXDConn struct {
 	Socket string
 	client lxd.InstanceServer
@@ -17,14 +19,11 @@ func (c *LXDConn) Connect() error {
 	return err
 }
 
-// Perform a systemctl restart weewx using the LXD unix socket
-func (c *LXDConn) RestartContainerProc(container, proc string) error {
+// Runs a command inside the container given an array of strings
+// Most common will be []string{"bin/systemctl","restart","someservice"}
+func (c *LXDConn) RunCommand(container string, command []string) error {
 	req := api.InstanceExecPost{
-		Command: []string{
-			"/bin/systemctl",
-			"restart",
-			proc,
-		},
+		Command:     command,
 		Interactive: false,
 	}
 	// Send the command
@@ -34,4 +33,10 @@ func (c *LXDConn) RestartContainerProc(container, proc string) error {
 	}
 	// Wait for it to complete
 	return restart.Wait()
+}
+
+// Restarts the entire container
+func (c *LXDConn) RestartContainer() error {
+	var err error
+	return err
 }

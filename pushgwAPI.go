@@ -22,9 +22,9 @@ type pushgwAPI struct {
 func (m *pushgwAPI) getMetrics() error {
 	var err error
 	var r *http.Response
-	r, err = client.Get(pushgw + "/api/v1/metrics")
+	r, err = client.Get(conf.Settings.PushGW + "/api/v1/metrics")
 	if err != nil {
-		m.log.WithFields(logrus.Fields{"err": err, "gw": pushgw}).
+		m.log.WithFields(logrus.Fields{"err": err, "gw": conf.Settings.PushGW}).
 			Error("Unable to retrieve current metrics from PushGateway")
 	}
 	json.NewDecoder(r.Body).Decode(m)

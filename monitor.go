@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"rdmcguire/pushgw_bouncer/handlers"
+	"time"
+)
 
 type monitor struct {
 	Name             string   `yaml:"name"`
@@ -15,6 +18,7 @@ type monitor struct {
 	lastUpdateString string
 	lastUpdateTime   time.Time
 	lastUpdateSecs   int
+	handler          handlers.Handler
 }
 
 // Fetches the last update string from the pushgateway metrics,
@@ -40,4 +44,13 @@ func (m *monitor) isLively() bool {
 		lively = false
 	}
 	return lively
+}
+
+// Uses the assigned handler to perform a restart
+func (m *monitor) bounce() error {
+	var err error
+	if m.RestartType == "command" {
+		err = m.handler.RunCommand(m.ContainerName, m.RestartCommand)
+	}
+	return err
 }

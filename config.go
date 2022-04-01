@@ -56,6 +56,12 @@ func (c *config) getConfig() {
 	}
 	// Overwrite settings from flags
 	c.mergeSettings()
+	// Assign Handlers to monitors
+	for _, m := range c.Monitors {
+		if m.Type == "lxd" {
+			m.handler = lxd
+		}
+	}
 }
 
 // Overwrites yaml settings if specified on command-line

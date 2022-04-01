@@ -56,35 +56,68 @@ func init() {
 		Debug("Logging Initialized")
 
 	// Hello World
-	log.WithField("pushGW", pushgw).
+	log.WithField("pushGW", conf.Settings.PushGW).
 		Info("Starting PushGW Bouncer")
 
 	// Prepare pushGW API, LXD Client, and Docker Client
 	pushGW = &pushgwAPI{log: log}
-	lxd = &handlers.LXDConn{Socket: socketLXD}
+	lxd = &handlers.LXDConn{Socket: conf.Settings.SocketLXD}
 
 	// Connect to LXD socketLXD
 	if err := lxd.Connect(); err != nil {
 		log.WithFields(logrus.Fields{"socket": socketLXD, "error": err}).
 			Fatal("Unable to connect to LXD socket")
 	}
-	log.WithField("LXD Socket", socketLXD).Info("LXD Connected")
+	log.WithField("LXD Socket", conf.Settings.SocketLXD).Info("LXD Connected")
 
 	// TODO Connect to Docker socket
 }
 
 func main() {
 	// Tick away
-	interval, _ := time.ParseDuration(conf.Settings.CheckInterval)
+	interval, err := time.ParseDuration(conf.Settings.CheckInterval)
+	if err != nil {
+		log.WithField("error", err).Fatal("Unable to parse check interval")
+	} else {
+		log.WithField("interval", interval).
+			Info("Starting main loop")
+	}
 	ticker := time.NewTicker(interval)
 	for range ticker.C {
 		// First refresh metrics from pushgateway
 		pushGW.getMetrics()
+		log.Debugf("Updated metrics from pushgateway")
 		// Next check each monitor for liveness
 		for _, monitor := range conf.Monitors {
+			// Update the monitor's last update from the pushGW metrics
 			monitor.setLastUpdate(pushGW)
+			log.WithFields(logrus.Fields{
+				"monitor":        monitor.Name,
+				"lastUpdate":     monitor.lastUpdateTime,
+				"lastUpdateSecs": monitor.lastUpdateSecs,
+			}).Trace("Retrieved monitor update info")
+			// Check to see if it is considered live
 			if !monitor.isLively() {
-				log.WithField("monitor", monitor).Warn("Monitor is not lively!")
+				log.WithField("monitor", monitor.Name).Warn("Monitor is not lively!")
+				// Attempt to bounce, log result
+				if err := monitor.bounce(); err != nil {
+					log.WithFields(logrus.Fields{
+						"monitor": monitor.Name,
+						"error":   err,
+					}).Error("Failed to bounce monitor")
+				} else {
+					log.WithFields(logrus.Fields{
+						"monitor":    monitor.Name,
+						"container":  monitor.ContainerName,
+						"lastUpdate": monitor.lastUpdateString,
+					}).Warn("Bounced stuck monitor")
+				}
+			} else {
+				log.WithFields(logrus.Fields{
+					"monitor":        monitor.Name,
+					"lastUpdateSecs": monitor.lastUpdateSecs,
+					"maxAge":         monitor.MaxAgeSecs,
+				}).Debug("Monitor liveness ok")
 			}
 		}
 	}
