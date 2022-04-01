@@ -1,11 +1,12 @@
 version: "3"
 services:
-  weewx_keepalive:
+  pushgw_bouncer:
     network_mode: bridge
-    image: image.libretechconsulting.com/dev/weewx_keepalive:latest
-    container_name: weewx_keepalive
+    image: image.libretechconsulting.com/dev/pushgw_bouncer:latest
+    container_name: pushgw_bouncer
     volumes:
       - /var/snap/lxd/common/lxd/unix.socket:/var/snap/lxd/common/lxd/unix.socket
+      - /var/run/docker.sock:/var/run/docker.sock
     command:
-      - --logLevel=warn
+      - --logLevel=info
     restart: unless-stopped

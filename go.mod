@@ -1,10 +1,11 @@
-module rdmcguire/weewx_keepalive
+module rdmcguire/pushgw_bouncer
 
 go 1.18
 
 require (
-	github.com/lxc/lxd v0.0.0-20220331144806-9f989403d303
+	github.com/lxc/lxd v0.0.0-20220331180802-7cf9e021fffc
 	github.com/sirupsen/logrus v1.8.1
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )
 
 require (

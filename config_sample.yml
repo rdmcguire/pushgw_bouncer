@@ -1,0 +1,22 @@
+global:
+  checkInterval: 5m
+  logLevel: info
+monitors:
+  - name: WeeWX
+    maxAge: 5m
+    type: lxd
+    container_name: weewx
+    label_name: job
+    label_value: weewx
+    restart_type: command
+    restart_command:
+      - /bin/systemd
+      - restart
+      - weewx
+  - name: API Exporter
+    maxAge: 1h30m
+    type: docker
+    container_name: prom-stack_api-exporter_1
+    label_name: job
+    label_value: api_exporter
+    restart_type: container

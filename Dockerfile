@@ -7,4 +7,4 @@ RUN go build
 FROM image.libretechconsulting.com/library/alpine:latest
 WORKDIR /app
 COPY --from=build /go/src/app /app
-ENTRYPOINT [ "./weewx_keepalive" ]
+ENTRYPOINT [ "./pushgw_bouncer" ]
