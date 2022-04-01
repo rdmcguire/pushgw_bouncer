@@ -45,7 +45,7 @@ monitors:
     label_value: weewx
     restart_type: command
     restart_command:
-      - /bin/systemd
+      - /bin/systemctl
       - restart
       - weewx
 ```
