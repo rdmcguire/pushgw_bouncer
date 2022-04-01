@@ -31,6 +31,7 @@ var (
 	log    *logrus.Logger
 	pushGW *pushgwAPI
 	lxd    *handlers.LXDConn
+	docker *handlers.DockerConn
 )
 
 // All flags are optional
@@ -61,16 +62,26 @@ func init() {
 
 	// Prepare pushGW API, LXD Client, and Docker Client
 	pushGW = &pushgwAPI{log: log}
-	lxd = &handlers.LXDConn{Socket: conf.Settings.SocketLXD}
 
 	// Connect to LXD socketLXD
-	if err := lxd.Connect(); err != nil {
-		log.WithFields(logrus.Fields{"socket": socketLXD, "error": err}).
-			Fatal("Unable to connect to LXD socket")
+	if conf.hasHandler("lxd") {
+		lxd = &handlers.LXDConn{Socket: conf.Settings.SocketLXD}
+		if err := lxd.Connect(); err != nil {
+			log.WithFields(logrus.Fields{"socket": conf.Settings.SocketLXD, "error": err}).
+				Fatal("Unable to connect to LXD socket")
+		}
+		log.WithField("LXD Socket", conf.Settings.SocketLXD).Info("LXD Connected")
 	}
-	log.WithField("LXD Socket", conf.Settings.SocketLXD).Info("LXD Connected")
 
-	// TODO Connect to Docker socket
+	// Connect to Docker
+	if conf.hasHandler("docker") {
+		docker = &handlers.DockerConn{Socket: conf.Settings.SocketDocker, Log: log}
+		if err := docker.Connect(); err != nil {
+			log.WithFields(logrus.Fields{"socket": conf.Settings.SocketDocker, "error": err}).
+				Fatal("Unable to connect to Docker socket")
+		}
+		log.WithField("Docker Socket", conf.Settings.SocketDocker).Info("Docker Connected")
+	}
 }
 
 func main() {

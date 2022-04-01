@@ -36,7 +36,7 @@ func (c *LXDConn) RunCommand(container string, command []string) error {
 }
 
 // Restarts the entire container
-func (c *LXDConn) RestartContainer() error {
+func (c *LXDConn) RestartContainer(container string) error {
 	var err error
 	return err
 }

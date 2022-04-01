@@ -8,5 +8,6 @@ services:
       - /var/snap/lxd/common/lxd/unix.socket:/var/snap/lxd/common/lxd/unix.socket
       - /var/run/docker.sock:/var/run/docker.sock
     command:
-      - --logLevel=info
+      - --logLevel=debug
+      - --checkInterval=5m
     restart: unless-stopped

@@ -32,11 +32,13 @@ func (c *config) getConfig() {
 	if err != nil {
 		log.Fatalf("Failed to load configuration from %s", configFile)
 	}
+
 	// Parse the file
 	err = yaml.Unmarshal(yamlConf, c)
 	if err != nil {
 		log.Fatalf("Unable to load config: %+v", err)
 	}
+
 	// Sanity checks
 	for _, m := range c.Monitors {
 		var err error
@@ -54,13 +56,32 @@ func (c *config) getConfig() {
 			m.MaxAgeSecs = int(duration.Seconds())
 		}
 	}
+
 	// Overwrite settings from flags
 	c.mergeSettings()
+
 	// Assign Handlers to monitors
 	for _, m := range c.Monitors {
-		if m.Type == "lxd" {
-			m.handler = lxd
-		}
+		c.setHandler(m)
+		log.WithFields(logrus.Fields{
+			"monitor": m.Name,
+			"handler": m.handler,
+		}).Debug("Monitor handler assigned")
+	}
+}
+
+// Find the correct handler for the monitor and set it
+func (c *config) setHandler(m *monitor) {
+	if m.Type == "lxd" {
+		m.handler = lxd
+	} else if m.Type == "docker" {
+		m.handler = docker
+	} else {
+		log.WithFields(logrus.Fields{
+			"monitor": m.Name,
+			"handler": m.Type,
+		}).Error("Monitor handler not found")
+		m.handler = nil
 	}
 }
 
@@ -109,4 +130,15 @@ func (c *config) getLogLevel() logrus.Level {
 		level = logrus.WarnLevel
 	}
 	return level
+}
+
+// Check to see if specified handler is needed
+func (c *config) hasHandler(name string) bool {
+	var present bool = false
+	for _, m := range c.Monitors {
+		if m.Type == name {
+			present = true
+		}
+	}
+	return present
 }
