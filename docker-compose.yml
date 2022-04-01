@@ -7,7 +7,9 @@ services:
     volumes:
       - /var/snap/lxd/common/lxd/unix.socket:/var/snap/lxd/common/lxd/unix.socket
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./config.yml:/config.yml
     command:
       - --logLevel=debug
       - --checkInterval=5m
+      - --configFile=/config.yml
     restart: unless-stopped
