@@ -35,8 +35,8 @@ var (
 	conf   *config
 	log    *logrus.Logger
 	pushGW *pushgwAPI
-	lxd    *handlers.LXDConn
-	docker *handlers.DockerConn
+	lxdH   *handlers.LXDConn
+	dkrH   *handlers.DockerConn
 )
 
 // All flags are optional
@@ -69,8 +69,14 @@ func init() {
 
 	// Connect to LXD socketLXD
 	if conf.hasHandler("lxd") {
-		lxd = &handlers.LXDConn{Socket: conf.Settings.SocketLXD}
-		if err := lxd.Connect(); err != nil {
+		lxdH = &handlers.LXDConn{
+			Socket: conf.Settings.SocketLXD,
+			Log:    log,
+		}
+		// lxdH = new(handlers.LXDConn)
+		// lxdH.Socket = conf.Settings.SocketLXD
+		// lxdH.Log = log
+		if err := lxdH.Connect(); err != nil {
 			log.WithFields(logrus.Fields{"socket": conf.Settings.SocketLXD, "error": err}).
 				Fatal("Unable to connect to LXD socket")
 		}
@@ -79,13 +85,19 @@ func init() {
 
 	// Connect to Docker
 	if conf.hasHandler("docker") {
-		docker = &handlers.DockerConn{Socket: conf.Settings.SocketDocker, Log: log}
-		if err := docker.Connect(); err != nil {
+		dkrH = &handlers.DockerConn{
+			Socket: conf.Settings.SocketDocker,
+			Log:    log,
+		}
+		if err := dkrH.Connect(); err != nil {
 			log.WithFields(logrus.Fields{"socket": conf.Settings.SocketDocker, "error": err}).
 				Fatal("Unable to connect to Docker socket")
 		}
 		log.WithField("Docker Socket", conf.Settings.SocketDocker).Info("Docker Connected")
 	}
+
+	// Add handlers to monitors
+	conf.setHandlers()
 
 	// Serve Prometheus Metrics
 	log.WithFields(logrus.Fields{
@@ -114,12 +126,28 @@ func main() {
 
 			// Update the monitor's last update from the pushGW metrics
 			if err := monitor.setLastUpdate(pushGW); err != nil {
+				// Something went wround, log the error and attempt to bounce
 				log.WithFields(logrus.Fields{
 					"monitor": monitor.Name,
 					"error":   err,
-				}).Warn("Failed to find monitor metrics in pushgateway")
-				// If we came up empty-handed, just stop
-				// TODO in this case we should determine if a bounce is appropriate
+				}).Warn("Failed to find monitor metrics in pushgateway, attempting bounce")
+				if err = monitor.bounce(); err != nil {
+					// Couldn't bounce (may be ok if recently attempted)
+					if monitor.canBounce() {
+						monitorBounces.WithLabelValues(monitor.Name, "failed").Inc()
+					} else {
+						monitorBounces.WithLabelValues(monitor.Name, "ineligible").Inc()
+					}
+					log.WithFields(logrus.Fields{
+						"monitor": monitor.Name,
+						"error":   err,
+					}).Warn("Unable to bounce monitor")
+				} else {
+					// We bounced it
+					monitorBounces.WithLabelValues(monitor.Name, "ok").Inc()
+					log.WithField("monitor", monitor.Name).Warn("Monitor bounced")
+				}
+				// Done, next
 				continue
 			}
 

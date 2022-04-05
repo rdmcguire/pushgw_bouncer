@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"rdmcguire/pushgw_bouncer/handlers"
 	"time"
 )
@@ -57,15 +58,37 @@ func (m *monitor) isLively() bool {
 
 // Uses the assigned handler to perform a restart
 func (m *monitor) bounce() error {
+	// Check if bouncing is appropriate
+	if !m.canBounce() {
+		return errors.New("Monitor is not ready for bouncing")
+	}
+
+	// Bounce
 	var err error
 	if m.RestartType == "command" {
 		err = m.handler.RunCommand(m.ContainerName, m.RestartCommand)
 	} else if m.RestartType == "container" {
 		err = m.handler.RestartContainer(m.ContainerName)
 	}
+
 	// Record the last bounced time if successful
 	if err == nil {
 		m.lastBounced = time.Now()
 	}
+
 	return err
+}
+
+// Check to see if a bounce is appropos
+func (m *monitor) canBounce() bool {
+	if m.lastBounced.IsZero() {
+		// If we've never bounced, bounce
+		return true
+	} else if time.Since(m.lastBounced).Seconds() > float64(m.MaxAgeSecs) {
+		// If it's been a while since we bounced, bounce
+		return true
+	} else {
+		// Otherwise, no bounce
+		return false
+	}
 }

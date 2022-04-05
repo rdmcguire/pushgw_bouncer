@@ -63,7 +63,10 @@ func (c *config) getConfig() {
 
 	// Set log level
 	log.SetLevel(c.getLogLevel())
+}
 
+// Set handlers (should instantiate first)
+func (c *config) setHandlers() {
 	// Assign Handlers to monitors
 	for _, m := range c.Monitors {
 		c.setHandler(m)
@@ -73,9 +76,9 @@ func (c *config) getConfig() {
 // Find the correct handler for the monitor and set it
 func (c *config) setHandler(m *monitor) {
 	if m.Type == "lxd" {
-		m.handler = lxd
+		m.handler = lxdH
 	} else if m.Type == "docker" {
-		m.handler = docker
+		m.handler = dkrH
 	} else {
 		log.WithFields(logrus.Fields{
 			"monitor": m.Name,
@@ -83,6 +86,7 @@ func (c *config) setHandler(m *monitor) {
 		}).Error("Monitor handler not found")
 		m.handler = nil
 	}
+	log.Tracef("Monitor loaded: %+v", m)
 }
 
 // Overwrites yaml settings if specified on command-line

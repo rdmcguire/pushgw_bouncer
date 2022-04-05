@@ -31,6 +31,8 @@ func (c *DockerConn) Connect() error {
 // Runs a command inside the container given an array of strings
 // Most common will be []string{"bin/systemctl","restart","someservice"}
 func (c *DockerConn) RunCommand(container string, command []string) error {
+	c.Log.WithFields(logrus.Fields{"container": container, "command": command}).
+		Debug("Docker: Running Restart Command")
 	var err error
 
 	// Configure the command
@@ -74,6 +76,8 @@ func (c *DockerConn) RunCommand(container string, command []string) error {
 
 // Restarts the specified docker container
 func (c *DockerConn) RestartContainer(container string) error {
+	c.Log.WithFields(logrus.Fields{"container": container}).
+		Debug("Docker: Restarting Container")
 	duration := restartWait * time.Second
 	return c.dockerClient.
 		ContainerRestart(context.Background(), container, &duration)
