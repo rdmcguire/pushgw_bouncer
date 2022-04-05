@@ -13,6 +13,10 @@ import (
 const (
 	defaultCheckInterval string = "1m"
 	defaultLogLevel      string = "info"
+	defaultAddr          string = ":9090"
+	defaultSocketLXD     string = "/var/snap/lxd/common/lxd/unix.socket"
+	defaultSocketDocker  string = "/var/run/docker.sock"
+	defaultPushGW        string = "http://localhost:9091"
 )
 
 // Command-line Flags override YAML config
@@ -23,6 +27,7 @@ var (
 	socketDocker  string
 	logLevel      string
 	configFile    string = "config.yml"
+	addr          string
 )
 
 // Global objects
@@ -44,6 +49,7 @@ func init() {
 	flag.StringVar(&socketDocker, "socketDocker", socketDocker, "Location of Docker Unix socket")
 	flag.StringVar(&logLevel, "logLevel", logLevel, "Log level (error|warn|info|debug|trace)")
 	flag.StringVar(&checkInterval, "checkInterval", checkInterval, "Interval at which to perform liveliness check")
+	flag.StringVar(&addr, "addr", addr, "Listen address for Prometheus metrics")
 	flag.Parse()
 
 	// Setup
@@ -57,8 +63,7 @@ func init() {
 		Debug("Logging Initialized")
 
 	// Hello World
-	log.WithField("pushGW", conf.Settings.PushGW).
-		Info("Starting PushGW Bouncer")
+	log.Info("Starting PushGW Bouncer")
 
 	// Prepare pushGW API, LXD Client, and Docker Client
 	pushGW = &pushgwAPI{log: log}
@@ -82,6 +87,13 @@ func init() {
 		}
 		log.WithField("Docker Socket", conf.Settings.SocketDocker).Info("Docker Connected")
 	}
+
+	// Serve Prometheus Metrics
+	log.WithFields(logrus.Fields{
+		"pushgateway": conf.Settings.PushGW,
+		"listenAddr":  conf.Settings.Addr,
+	}).Info("Launching prometheus metrics goroutine")
+	go promInit()
 }
 
 func main() {
@@ -112,11 +124,15 @@ func main() {
 				log.WithField("monitor", monitor.Name).Warn("Monitor is not lively!")
 				// Attempt to bounce, log result
 				if err := monitor.bounce(); err != nil {
+					// Update counter
+					monitorBounces.WithLabelValues(monitor.Name, "failed").Inc()
 					log.WithFields(logrus.Fields{
 						"monitor": monitor.Name,
 						"error":   err,
 					}).Error("Failed to bounce monitor")
 				} else {
+					// Update counter
+					monitorBounces.WithLabelValues(monitor.Name, "ok").Inc()
 					log.WithFields(logrus.Fields{
 						"monitor":    monitor.Name,
 						"container":  monitor.ContainerName,

@@ -22,11 +22,18 @@ type pushgwAPI struct {
 func (m *pushgwAPI) getMetrics() error {
 	var err error
 	var r *http.Response
+	// Perform HTTP GET
 	r, err = client.Get(conf.Settings.PushGW + "/api/v1/metrics")
 	if err != nil {
 		m.log.WithFields(logrus.Fields{"err": err, "gw": conf.Settings.PushGW}).
 			Error("Unable to retrieve current metrics from PushGateway")
+		// Update counter
+		monitorUpdates.WithLabelValues("all", "failed").Inc()
+	} else {
+		// Update counter
+		monitorUpdates.WithLabelValues("all", "ok").Inc()
 	}
+	// Decode Response into pushgwAPI
 	json.NewDecoder(r.Body).Decode(m)
 	r.Body.Close()
 	return err
@@ -44,6 +51,13 @@ func (m *pushgwAPI) getLastUpdate(monitor *monitor) string {
 		} else {
 			continue
 		}
+	}
+	if lastUpdate == "" {
+		// Update counter
+		monitorUpdates.WithLabelValues(monitor.Name, "failed").Inc()
+	} else {
+		// Update counter
+		monitorUpdates.WithLabelValues(monitor.Name, "ok").Inc()
 	}
 	return lastUpdate
 }

@@ -41,7 +41,12 @@ func (m *monitor) setLastUpdate(p *pushgwAPI) error {
 func (m *monitor) isLively() bool {
 	var lively bool = true
 	if m.lastUpdateSecs > m.MaxAgeSecs {
+		// Update counter
+		monitorChecks.WithLabelValues(m.Name, "unhealthy").Inc()
 		lively = false
+	} else {
+		// Update counter
+		monitorChecks.WithLabelValues(m.Name, "healthy").Inc()
 	}
 	return lively
 }
@@ -51,6 +56,8 @@ func (m *monitor) bounce() error {
 	var err error
 	if m.RestartType == "command" {
 		err = m.handler.RunCommand(m.ContainerName, m.RestartCommand)
+	} else if m.RestartType == "container" {
+		err = m.handler.RestartContainer(m.ContainerName)
 	}
 	return err
 }

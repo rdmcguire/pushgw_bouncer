@@ -38,5 +38,16 @@ func (c *LXDConn) RunCommand(container string, command []string) error {
 // Restarts the entire container
 func (c *LXDConn) RestartContainer(container string) error {
 	var err error
-	return err
+	var restart lxd.Operation
+	state := api.InstanceStatePut{
+		Action:  "restart",
+		Timeout: 10,
+		Force:   true,
+	}
+	restart, err = c.client.UpdateInstanceState(container, state, "")
+	if err != nil {
+		return err
+	}
+	// Wait and return
+	return restart.Wait()
 }
