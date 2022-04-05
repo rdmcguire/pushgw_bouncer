@@ -61,13 +61,12 @@ func (c *config) getConfig() {
 	// Overwrite settings from flags
 	c.mergeSettings()
 
+	// Set log level
+	log.SetLevel(c.getLogLevel())
+
 	// Assign Handlers to monitors
 	for _, m := range c.Monitors {
 		c.setHandler(m)
-		log.WithFields(logrus.Fields{
-			"monitor": m.Name,
-			"handler": m.handler,
-		}).Debug("Monitor handler assigned")
 	}
 }
 

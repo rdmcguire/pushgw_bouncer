@@ -15,6 +15,7 @@ type monitor struct {
 	MaxAgeSecs       int      // Set by time.ParseDuration in config
 	RestartType      string   `yaml:"restart_type"`
 	RestartCommand   []string `yaml:"restart_command"`
+	lastBounced      time.Time
 	lastUpdateString string
 	lastUpdateTime   time.Time
 	lastUpdateSecs   int
@@ -26,7 +27,10 @@ type monitor struct {
 func (m *monitor) setLastUpdate(p *pushgwAPI) error {
 	var err error
 	// Get string from pushgw
-	m.lastUpdateString = p.getLastUpdate(m)
+	m.lastUpdateString, err = p.getLastUpdate(m)
+	if err != nil {
+		return err
+	}
 	// Convert to time.Time (parse)
 	m.lastUpdateTime, err = time.Parse(time.RFC3339, m.lastUpdateString)
 	if err != nil {
@@ -58,6 +62,10 @@ func (m *monitor) bounce() error {
 		err = m.handler.RunCommand(m.ContainerName, m.RestartCommand)
 	} else if m.RestartType == "container" {
 		err = m.handler.RestartContainer(m.ContainerName)
+	}
+	// Record the last bounced time if successful
+	if err == nil {
+		m.lastBounced = time.Now()
 	}
 	return err
 }

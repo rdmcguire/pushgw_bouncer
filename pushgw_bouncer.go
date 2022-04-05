@@ -57,8 +57,7 @@ func init() {
 	conf = new(config)
 	conf.getConfig()
 
-	// Set logging level
-	log.SetLevel(conf.getLogLevel())
+	// Logging
 	log.WithField("level", log.GetLevel()).
 		Debug("Logging Initialized")
 
@@ -112,26 +111,41 @@ func main() {
 		log.Debugf("Updated metrics from pushgateway")
 		// Next check each monitor for liveness
 		for _, monitor := range conf.Monitors {
+
 			// Update the monitor's last update from the pushGW metrics
-			monitor.setLastUpdate(pushGW)
+			if err := monitor.setLastUpdate(pushGW); err != nil {
+				log.WithFields(logrus.Fields{
+					"monitor": monitor.Name,
+					"error":   err,
+				}).Warn("Failed to find monitor metrics in pushgateway")
+				// If we came up empty-handed, just stop
+				// TODO in this case we should determine if a bounce is appropriate
+				continue
+			}
+
+			// We got data, log it
 			log.WithFields(logrus.Fields{
 				"monitor":        monitor.Name,
 				"lastUpdate":     monitor.lastUpdateTime,
 				"lastUpdateSecs": monitor.lastUpdateSecs,
 			}).Trace("Retrieved monitor update info")
+
 			// Check to see if it is considered live
 			if !monitor.isLively() {
 				log.WithField("monitor", monitor.Name).Warn("Monitor is not lively!")
+
 				// Attempt to bounce, log result
 				if err := monitor.bounce(); err != nil {
-					// Update counter
+
+					// FAILED, Update counter
 					monitorBounces.WithLabelValues(monitor.Name, "failed").Inc()
 					log.WithFields(logrus.Fields{
 						"monitor": monitor.Name,
 						"error":   err,
 					}).Error("Failed to bounce monitor")
 				} else {
-					// Update counter
+
+					// SUCCESS, Update counter
 					monitorBounces.WithLabelValues(monitor.Name, "ok").Inc()
 					log.WithFields(logrus.Fields{
 						"monitor":    monitor.Name,
@@ -139,6 +153,8 @@ func main() {
 						"lastUpdate": monitor.lastUpdateString,
 					}).Warn("Bounced stuck monitor")
 				}
+
+				// Monitor is fine, log and continue
 			} else {
 				log.WithFields(logrus.Fields{
 					"monitor":        monitor.Name,

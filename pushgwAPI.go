@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -41,8 +42,9 @@ func (m *pushgwAPI) getMetrics() error {
 
 // Retrieve time_stamp from push_time_seconds if instance is weewx
 // Takes an instance of monitor to locate setting
-func (m *pushgwAPI) getLastUpdate(monitor *monitor) string {
+func (m *pushgwAPI) getLastUpdate(monitor *monitor) (string, error) {
 	var lastUpdate string
+	var err error
 	for key := range m.Data {
 		labels := m.Data[key]["labels"].(map[string]interface{})
 		label := labels[monitor.LabelName].(string)
@@ -54,10 +56,11 @@ func (m *pushgwAPI) getLastUpdate(monitor *monitor) string {
 	}
 	if lastUpdate == "" {
 		// Update counter
+		err = errors.New("Unable to retrieve last update from pushgateway")
 		monitorUpdates.WithLabelValues(monitor.Name, "failed").Inc()
 	} else {
 		// Update counter
 		monitorUpdates.WithLabelValues(monitor.Name, "ok").Inc()
 	}
-	return lastUpdate
+	return lastUpdate, err
 }
