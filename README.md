@@ -3,7 +3,14 @@
 The purpose of this tool is to restart some process or container
 should the last push to a prometheus pushgateway be too far in the past.
 
+To use, simply push anything into your pushgateway with at least one identifying
+label, match on that with label_name and label_value, and configure the restart action.
+
+**TODO** Currently pushgwAPI.go uses the time_stamp field of the push_time_seconds metric.
+This should be extended to permit specifying a different metric name.
+
 ## Currently supported handlers:
+
 - LXD
 - Docker
 
@@ -21,6 +28,10 @@ restart an entire container. More could be added by extending the handlers.Handl
 The configuration file is documented in the config and metric structs.
 
 Command-line parameters take precedence over config file parameters.
+
+The label_name and label_value fields are for matching the correct metric among all pushgateway metrics.
+At the top level, metrics are grouped by unique labels, in the below example a label called job
+is being used to match, and the value is given in label_value.
 
 **Docker Container Restart Monitor**
 ```yaml
@@ -58,6 +69,7 @@ global:
   socket_lxd: /var/snap/lxd/common/lxd/unix.socket
   socket_docker: /var/run/docker.sock
   push_gw: http://pushgateway:9091
+  addr: :9090
 ```
 
 ## Running
