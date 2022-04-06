@@ -160,7 +160,12 @@ func main() {
 
 			// Check to see if it is considered live
 			if !monitor.isLively() {
-				log.WithField("monitor", monitor.Name).Warn("Monitor is not lively!")
+				log.WithFields(logrus.Fields{
+					"monitor":        monitor.Name,
+					"lastUpdate":     monitor.lastUpdateString,
+					"lastUpdateSecs": monitor.lastUpdateSecs,
+					"maxAge":         monitor.MaxAge,
+				}).Warn("Monitor is not lively!")
 
 				// Attempt to bounce, log result
 				if err := monitor.bounce(); err != nil {

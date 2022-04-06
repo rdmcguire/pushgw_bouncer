@@ -11,8 +11,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./config.yml:/config.yml
     command:
-      - --logLevel=debug
-      - --checkInterval=5m
+      - --logLevel=info
       - --configFile=/config.yml
       - --addr=:9090
     restart: unless-stopped
